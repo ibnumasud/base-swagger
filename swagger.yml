@@ -1,0 +1,38 @@
+consumes:
+- multipart/form-data
+info:
+  title: Swagger Trash
+  version: 0.1.0
+paths: 
+  /:
+    get:
+      tags: 
+        - default
+      operationId: default
+      summary: get update
+      consumes:
+      - application/json
+      responses:
+        200:
+          description: OK
+  /upload:
+    post:
+      tags:
+        - uploadS3
+      operationId: uploadS3
+      summary: Uploads a file.
+      consumes:
+        - multipart/form-data
+      parameters:
+        - in: formData
+          name: upfile
+          type: file
+          description: The file to upload.
+      responses:
+        200:
+          description: OK
+produces:
+- application/json
+schemes:
+- http
+swagger: "2.0"
