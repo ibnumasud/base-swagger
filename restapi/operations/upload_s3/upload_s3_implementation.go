@@ -1,8 +1,6 @@
 package upload_s3
 
 import (
-	"bytes"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -14,7 +12,7 @@ import (
 //Upload buat ke s3
 func Upload(params UploadS3Params) middleware.Responder {
 
-	var Buf bytes.Buffer
+	// var Buf bytes.Buffer
 	// in your case file would be fileupload
 	file, header, err := params.HTTPRequest.FormFile("file")
 	if err != nil {
@@ -22,7 +20,7 @@ func Upload(params UploadS3Params) middleware.Responder {
 	}
 	defer file.Close()
 	name := strings.Split(header.Filename, ".")
-	fmt.Printf("File name %s\n", name[0])
+	log.Printf("File name %s\n", name[0])
 
 	// Copy the file data to my buffer
 	// io.Copy(&Buf, file)
@@ -39,6 +37,7 @@ func Upload(params UploadS3Params) middleware.Responder {
 	endpoint := os.Getenv("ENDPOINT")
 	accessKeyID := os.Getenv("ACCESSKEYID")
 	secretAccessKey := os.Getenv("SECRETACCESSKEY")
+	bucket := os.Getenv("BUCKET")
 	useSSL := true
 
 	// Initialize minio client object.
@@ -47,8 +46,7 @@ func Upload(params UploadS3Params) middleware.Responder {
 		log.Fatalln(err)
 	}
 	log.Println("lolos create minio client")
-
-	n, err := minioClient.PutObject("ibnumasud", header.Filename, file, header.Size, minio.PutObjectOptions{ContentType: "application/pdf"})
+	n, err := minioClient.PutObject(bucket, header.Filename, file, header.Size, minio.PutObjectOptions{ContentType: header.Header.Get("Content-Type")})
 	if err != nil {
 		log.Println("push ke minio")
 		log.Fatalln(err)
