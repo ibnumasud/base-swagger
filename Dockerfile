@@ -11,6 +11,7 @@ RUN go get -u github.com/go-openapi/runtime/flagext
 RUN go get -u github.com/go-openapi/runtime/middleware
 RUN go get -u github.com/go-openapi/runtime/security
 RUN go get -u github.com/minio/minio-go
+RUN go get -u github.com/rs/cors
 
 ADD ca-certificates.crt /etc/ssl/certs/
 WORKDIR /go/src/github.com/ibnumasud/base-swagger/cmd/upload-s3-server
