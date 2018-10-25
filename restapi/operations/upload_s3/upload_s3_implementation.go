@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	middleware "github.com/go-openapi/runtime/middleware"
+	models "github.com/ibnumasud/base-swagger/models"
 	minio "github.com/minio/minio-go"
 )
 
 //Upload buat ke s3
-func Upload(params UploadS3Params) middleware.Responder {
+func Upload(params UploadS3Params, principal *models.Principal) middleware.Responder {
 
 	// var Buf bytes.Buffer
 	// in your case file would be fileupload

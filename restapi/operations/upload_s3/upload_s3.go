@@ -9,19 +9,21 @@ import (
 	"net/http"
 
 	middleware "github.com/go-openapi/runtime/middleware"
+
+	models "github.com/ibnumasud/base-swagger/models"
 )
 
 // UploadS3HandlerFunc turns a function with the right signature into a upload s3 handler
-type UploadS3HandlerFunc func(UploadS3Params) middleware.Responder
+type UploadS3HandlerFunc func(UploadS3Params, *models.Principal) middleware.Responder
 
 // Handle executing the request and returning a response
-func (fn UploadS3HandlerFunc) Handle(params UploadS3Params) middleware.Responder {
-	return fn(params)
+func (fn UploadS3HandlerFunc) Handle(params UploadS3Params, principal *models.Principal) middleware.Responder {
+	return fn(params, principal)
 }
 
 // UploadS3Handler interface for that can handle valid upload s3 params
 type UploadS3Handler interface {
-	Handle(UploadS3Params) middleware.Responder
+	Handle(UploadS3Params, *models.Principal) middleware.Responder
 }
 
 // NewUploadS3 creates a new http.Handler for the upload s3 operation
@@ -46,12 +48,25 @@ func (o *UploadS3) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 	var Params = NewUploadS3Params()
 
+	uprinc, aCtx, err := o.Context.Authorize(r, route)
+	if err != nil {
+		o.Context.Respond(rw, r, route.Produces, route, err)
+		return
+	}
+	if aCtx != nil {
+		r = aCtx
+	}
+	var principal *models.Principal
+	if uprinc != nil {
+		principal = uprinc.(*models.Principal) // this is really a models.Principal, I promise
+	}
+
 	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
 		o.Context.Respond(rw, r, route.Produces, route, err)
 		return
 	}
 
-	res := o.Handler.Handle(Params) // actually handle the request
+	res := o.Handler.Handle(Params, principal) // actually handle the request
 
 	o.Context.Respond(rw, r, route.Produces, route, res)
 

@@ -9,19 +9,21 @@ import (
 	"net/http"
 
 	middleware "github.com/go-openapi/runtime/middleware"
+
+	models "github.com/ibnumasud/base-swagger/models"
 )
 
 // DefaultHandlerFunc turns a function with the right signature into a default handler
-type DefaultHandlerFunc func(DefaultParams) middleware.Responder
+type DefaultHandlerFunc func(DefaultParams, *models.Principal) middleware.Responder
 
 // Handle executing the request and returning a response
-func (fn DefaultHandlerFunc) Handle(params DefaultParams) middleware.Responder {
-	return fn(params)
+func (fn DefaultHandlerFunc) Handle(params DefaultParams, principal *models.Principal) middleware.Responder {
+	return fn(params, principal)
 }
 
 // DefaultHandler interface for that can handle valid default params
 type DefaultHandler interface {
-	Handle(DefaultParams) middleware.Responder
+	Handle(DefaultParams, *models.Principal) middleware.Responder
 }
 
 // NewDefault creates a new http.Handler for the default operation
@@ -46,12 +48,25 @@ func (o *Default) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 	var Params = NewDefaultParams()
 
+	uprinc, aCtx, err := o.Context.Authorize(r, route)
+	if err != nil {
+		o.Context.Respond(rw, r, route.Produces, route, err)
+		return
+	}
+	if aCtx != nil {
+		r = aCtx
+	}
+	var principal *models.Principal
+	if uprinc != nil {
+		principal = uprinc.(*models.Principal) // this is really a models.Principal, I promise
+	}
+
 	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
 		o.Context.Respond(rw, r, route.Produces, route, err)
 		return
 	}
 
-	res := o.Handler.Handle(Params) // actually handle the request
+	res := o.Handler.Handle(Params, principal) // actually handle the request
 
 	o.Context.Respond(rw, r, route.Produces, route, res)
 

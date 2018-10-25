@@ -11,6 +11,7 @@ import (
 	middleware "github.com/go-openapi/runtime/middleware"
 	cors "github.com/rs/cors"
 
+	"github.com/ibnumasud/base-swagger/models"
 	"github.com/ibnumasud/base-swagger/restapi/operations"
 	"github.com/ibnumasud/base-swagger/restapi/operations/default_operations"
 	"github.com/ibnumasud/base-swagger/restapi/operations/upload_s3"
@@ -38,7 +39,17 @@ func configureAPI(api *operations.UploadS3API) http.Handler {
 
 	api.JSONProducer = runtime.JSONProducer()
 
-	api.DefaultOperationsDefaultHandler = default_operations.DefaultHandlerFunc(func(params default_operations.DefaultParams) middleware.Responder {
+	// Applies when the "x-token" header is set
+	api.KeyAuth = func(token string) (*models.Principal, error) {
+		if token == "abcdefuvwxyz" {
+			prin := models.Principal(token)
+			return &prin, nil
+		}
+		return nil, errors.New(401, "incorrect api key auth")
+
+	}
+
+	api.DefaultOperationsDefaultHandler = default_operations.DefaultHandlerFunc(func(params default_operations.DefaultParams, principal *models.Principal) middleware.Responder {
 		return default_operations.NewDefaultOK()
 	})
 	api.UploadS3UploadS3Handler = upload_s3.UploadS3HandlerFunc(upload_s3.Upload)

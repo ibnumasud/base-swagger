@@ -21,6 +21,8 @@ import (
 
 	"github.com/ibnumasud/base-swagger/restapi/operations/default_operations"
 	"github.com/ibnumasud/base-swagger/restapi/operations/upload_s3"
+
+	models "github.com/ibnumasud/base-swagger/models"
 )
 
 // NewUploadS3API creates a new UploadS3 instance
@@ -41,12 +43,20 @@ func NewUploadS3API(spec *loads.Document) *UploadS3API {
 		JSONConsumer:          runtime.JSONConsumer(),
 		MultipartformConsumer: runtime.DiscardConsumer,
 		JSONProducer:          runtime.JSONProducer(),
-		DefaultOperationsDefaultHandler: default_operations.DefaultHandlerFunc(func(params default_operations.DefaultParams) middleware.Responder {
+		DefaultOperationsDefaultHandler: default_operations.DefaultHandlerFunc(func(params default_operations.DefaultParams, principal *models.Principal) middleware.Responder {
 			return middleware.NotImplemented("operation DefaultOperationsDefault has not yet been implemented")
 		}),
-		UploadS3UploadS3Handler: upload_s3.UploadS3HandlerFunc(func(params upload_s3.UploadS3Params) middleware.Responder {
+		UploadS3UploadS3Handler: upload_s3.UploadS3HandlerFunc(func(params upload_s3.UploadS3Params, principal *models.Principal) middleware.Responder {
 			return middleware.NotImplemented("operation UploadS3UploadS3 has not yet been implemented")
 		}),
+
+		// Applies when the "x-token" header is set
+		KeyAuth: func(token string) (*models.Principal, error) {
+			return nil, errors.NotImplemented("api key auth (key) x-token from header param [x-token] has not yet been implemented")
+		},
+
+		// default authorizer is authorized meaning no requests are blocked
+		APIAuthorizer: security.Authorized(),
 	}
 }
 
@@ -79,6 +89,13 @@ type UploadS3API struct {
 
 	// JSONProducer registers a producer for a "application/json" mime type
 	JSONProducer runtime.Producer
+
+	// KeyAuth registers a function that takes a token and returns a principal
+	// it performs authentication based on an api key x-token provided in the header
+	KeyAuth func(string) (*models.Principal, error)
+
+	// APIAuthorizer provides access control (ACL/RBAC/ABAC) by providing access to the request and authenticated principal
+	APIAuthorizer runtime.Authorizer
 
 	// DefaultOperationsDefaultHandler sets the operation handler for the default operation
 	DefaultOperationsDefaultHandler default_operations.DefaultHandler
@@ -151,6 +168,10 @@ func (o *UploadS3API) Validate() error {
 		unregistered = append(unregistered, "JSONProducer")
 	}
 
+	if o.KeyAuth == nil {
+		unregistered = append(unregistered, "XTokenAuth")
+	}
+
 	if o.DefaultOperationsDefaultHandler == nil {
 		unregistered = append(unregistered, "default_operations.DefaultHandler")
 	}
@@ -174,14 +195,26 @@ func (o *UploadS3API) ServeErrorFor(operationID string) func(http.ResponseWriter
 // AuthenticatorsFor gets the authenticators for the specified security schemes
 func (o *UploadS3API) AuthenticatorsFor(schemes map[string]spec.SecurityScheme) map[string]runtime.Authenticator {
 
-	return nil
+	result := make(map[string]runtime.Authenticator)
+	for name, scheme := range schemes {
+		switch name {
+
+		case "key":
+
+			result[name] = o.APIKeyAuthenticator(scheme.Name, scheme.In, func(token string) (interface{}, error) {
+				return o.KeyAuth(token)
+			})
+
+		}
+	}
+	return result
 
 }
 
 // Authorizer returns the registered authorizer
 func (o *UploadS3API) Authorizer() runtime.Authorizer {
 
-	return nil
+	return o.APIAuthorizer
 
 }
 
